@@ -3,6 +3,10 @@ use serde_json;
 use std::fs;
 
 fn main() {
+    exercise_one();
+}
+
+fn exercise_one() {
     let path = "output.json";
     let a = Move { direction: Direction::Up, distance: 0 };
     println!("Serializing {:?}...", a);
