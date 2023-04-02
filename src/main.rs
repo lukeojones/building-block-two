@@ -1,3 +1,4 @@
+use std::error::Error;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
@@ -11,7 +12,51 @@ fn main() {
     // exercise_one();
     // exercise_two();
     // exercise_two_ron();
-    exercise_three_single_move();
+    // exercise_three_single_move();
+    exercise_three_multi_move();
+}
+
+
+fn exercise_three_multi_move() {
+    println!();
+    println!("<<< Exercise Three >>>");
+    let moves: Vec<Move> = (1..=1000)
+        .map(|n| Move { direction: Direction::Up, distance: n})
+        .collect();
+
+    let path = "output_three.bson";
+    let file = File::create(&path).expect(&*format!("Unable to create file: {}", path));
+
+    for m in moves {
+        let bson = bson::to_bson(&m).unwrap();
+        let document = bson.as_document().unwrap();
+        println!("{:?}", &document);
+        document.to_writer(&file).expect("Unable to write to file");
+    }
+
+    let mut file = File::open(path).expect("Unable to open file");
+    let mut deserialized_moves = Vec::new();
+    loop {
+        match bson::Document::from_reader(&mut file) {
+            Ok(bson_document) => {
+                let deserialized_move: Move = bson::from_document(bson_document).unwrap();
+                deserialized_moves.push(deserialized_move);
+            }
+            Err(e) => {
+                if let Some(io_error) = e.source().and_then(|source| source.downcast_ref::<std::io::Error>()) {
+                    if let ErrorKind::UnexpectedEof = io_error.kind() {
+                        break; // End of file, exit the loop
+                    }
+                } else {
+                    panic!("Issue deserializing {}", e);
+                }
+            }
+        }
+    }
+
+    for (index, m) in deserialized_moves.iter().enumerate() {
+        println!("Move {} is {:?}", index + 1, m);
+    }
 }
 
 fn exercise_three_single_move() {
