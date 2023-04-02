@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
 use std::fs::File;
-use std::io::ErrorKind;
+use std::io::{Cursor, Write, Read, ErrorKind};
 use ron;
 use bson;
 use bson::Document;
@@ -13,13 +13,56 @@ fn main() {
     // exercise_two();
     // exercise_two_ron();
     // exercise_three_single_move();
-    exercise_three_multi_move();
+    // exercise_three_multi_move();
+    exercise_three_multi_move_without_file();
 }
 
+fn exercise_three_multi_move_without_file() {
+    println!();
+    println!(" <<< Exercise Three (Multiple Move - Memory Only) >>> ");
+    let moves: Vec<Move> = (1..=1000)
+        .map(|n| Move { direction: Direction::Up, distance: n})
+        .collect();
+
+    let mut buffer = Vec::new();
+    let mut cursor = Cursor::new(buffer);
+
+    for m in moves {
+        let bson = bson::to_bson(&m).unwrap();
+        let document = bson.as_document().unwrap();
+        println!("{:?}", &document);
+        document.to_writer(&mut cursor).expect("Unable to write to buffer");
+    }
+
+    println!("Resetting cursor position to start");
+    cursor.set_position(0);
+    let mut deserialized_moves = Vec::new();
+    loop {
+        match bson::Document::from_reader(&mut cursor) {
+            Ok(bson_document) => {
+                let deserialized_move: Move = bson::from_document(bson_document).unwrap();
+                deserialized_moves.push(deserialized_move);
+            }
+            Err(e) => {
+                if let Some(io_error) = e.source().and_then(|source| source.downcast_ref::<std::io::Error>()) {
+                    if let ErrorKind::UnexpectedEof = io_error.kind() {
+                        break; // End of file, exit the loop
+                    }
+                } else {
+                    panic!("Issue deserializing {}", e);
+                }
+            }
+        }
+    }
+
+    for (index, m) in deserialized_moves.iter().enumerate() {
+        println!("Move {} is {:?}", index + 1, m);
+    }
+}
 
 fn exercise_three_multi_move() {
     println!();
-    println!("<<< Exercise Three >>>");
+    println!("<<< Exercise Three (Multiple Move) >>>");
     let moves: Vec<Move> = (1..=1000)
         .map(|n| Move { direction: Direction::Up, distance: n})
         .collect();
