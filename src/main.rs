@@ -1,12 +1,39 @@
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
+use std::fs::File;
+use std::io::ErrorKind;
 use ron;
+use bson;
+use bson::Document;
 
 fn main() {
     // exercise_one();
     // exercise_two();
-    exercise_two_ron();
+    // exercise_two_ron();
+    exercise_three_single_move();
+}
+
+fn exercise_three_single_move() {
+    println!();
+    println!("<<< Exercise Three (Single Move) >>>");
+
+    let path = "output_three.bson";
+    let file = File::create(&path).expect(&*format!("Unable to create file: {}", path));
+
+    println!("Writing BSON to file");
+    let m = Move { direction: Direction::Up, distance: 0};
+    let bson = bson::to_bson(&m).unwrap();
+    let document = bson.as_document().unwrap();
+    println!("{:?}", &document);
+    document.to_writer(&file).expect("Unable to write to file");
+
+    println!("Reading BSON from file");
+    let mut file = File::open(path).expect("Unable to open file");
+    let document = Document::from_reader(file).unwrap();
+    let obj: Move = bson::from_document::<Move>(document).unwrap();
+    println!("OLD: {:?}", &m);
+    println!("NEW: {:?}", &obj);
 }
 
 fn exercise_one() {
